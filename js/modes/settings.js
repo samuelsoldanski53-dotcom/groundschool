@@ -49,6 +49,7 @@ const Mode_Settings = (() => {
         <h2>About this data</h2>
         <p><strong>Scored set</strong> (993 questions, 9 subjects): correct answers taken directly from the source material's own answer markings. Used for Learn, Quiz, Flashcards, and Weak Topics scoring.</p>
         <p><strong>Reference set</strong> (6,551 questions, 8 subjects): included for extra practice, but the source files don't mark a correct answer, so these are unscored — Gemini will discuss the concept but won't claim to know "the" answer.</p>
+        <p><strong>Textbook grounding</strong>: for Air Law, Navigation, Operational Procedures, and Meteorology, Gemini's explanations pull in relevant passages from the Oxford ATPL course books and ICAO Annex 3 so its answers are grounded in your actual course material.</p>
       </div>
     `;
 

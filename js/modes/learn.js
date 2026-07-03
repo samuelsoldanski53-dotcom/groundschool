@@ -167,9 +167,14 @@ const Mode_Learn = (() => {
     const settings = UI.requireApiKey();
     if (!settings) { el.textContent = 'Add a Gemini API key in Settings to enable AI explanations.'; el.classList.remove('explain-loading'); return; }
     try {
+      let textbookContext = '';
+      if (Textbook.hasTextbook(q.subject)) {
+        const chunks = await Textbook.findRelevant(q.subject, q.text + ' ' + q.options.join(' '), 3);
+        textbookContext = Textbook.formatContext(chunks);
+      }
       const text = await Gemini.explainQuestion({
         apiKey: settings.geminiKey, model: settings.geminiModel,
-        question: q, userAnswerIndex: selIdx, isCorrect,
+        question: q, userAnswerIndex: selIdx, isCorrect, textbookContext,
       });
       el.textContent = text;
       el.classList.remove('explain-loading');

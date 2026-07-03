@@ -8,20 +8,57 @@ or alters them.
 
 - **Learn Mode** — one question at a time, original wording, instant correct/incorrect
   feedback plus a full Gemini explanation (why it's right, why your answer was wrong,
-  why the distractors are wrong, a memory aid, a common mistake).
+  why the distractors are wrong, a memory aid, a common mistake) — grounded in the
+  official course textbooks where available (see below).
 - **Flashcards** — auto-generated Question → Answer cards from the scored question
   bank, with flip animation, shuffle, Again/Good/Easy grading, and spaced repetition
   scheduling (SM-2 style).
-- **Quiz Mode** — timed-feel scored quizzes by subject or mixed, with a results
-  breakdown by subject and a full review of what you got wrong.
+- **Quiz Mode** — configurable scored quizzes (subject, length, weak-question
+  priority, "skip mastered questions"), a flag button per question, a results
+  screen with per-subject gauges, one-click **retry just what you got wrong** or
+  **review flagged questions**, quiz history, and a **🧠 Explain this** button on
+  every missed question in the review so Gemini walks you through it right there.
 - **Weak Topics** — automatically surfaces your lowest-accuracy subjects and
   currently-missed questions from your own answer history, plus an optional
   Gemini-generated study plan.
-- **AI Tutor** — a free-form chat instructor, optionally scoped to a specific question.
+- **AI Tutor** — a free-form chat instructor, optionally scoped to a specific
+  question, also grounded in the textbooks where relevant.
 - **Dashboard** — streaks, overall accuracy, per-subject mastery gauges, bookmarks.
 
 Dark/light mode, keyboard shortcuts (1–7 to answer, → for next, Space to flip a
 flashcard), and everything is mobile-responsive.
+
+## Textbook grounding
+
+Your upload also included a `TextBooks/` folder. I extracted and chunked the ones
+with a real text layer:
+
+| Book | Subject | Chunks |
+|---|---|---|
+| Oxford ATPL Book 1 — Air Law | ALW | 404 |
+| Oxford ATPL Book 10 — General Navigation | NAV | 463 |
+| ATPL Book 12 + Oxford ATPL Book 12 — Operational Procedures | OPC | 368 |
+| ICAO Annex 3 — Meteorological Service for International Air Navigation | MET | 166 |
+
+These live in `data/textbooks/*.json` (~4MB total, loaded lazily per subject only
+when you're studying that subject). When you view a question in Air Law, Navigation,
+Operational Procedures, or Meteorology, the app does a lightweight keyword search
+over the relevant book's chunks and feeds the 2-3 most relevant passages to Gemini
+so its explanation is grounded in the actual course material rather than general
+knowledge — same in Learn Mode, Quiz review, and the AI Tutor when a question is in
+context.
+
+Two files from that folder weren't included:
+- **`AIRLAW SUMMARY.pdf`** is a scanned/image-only PDF with no text layer, so it
+  couldn't be extracted without OCR. The full Air Law book covers the same ground.
+- **`OPC_EN.pdf`** turned out to be a smaller excerpt of the same Operational
+  Procedures question bank you already have in `Black/`, not a textbook — skipped
+  as redundant.
+
+Subjects without a matching textbook (AGK, COM, FPP, HPL, POF) work exactly as
+before — Gemini answers from its own aviation knowledge, clearly labelled as
+supplementary where relevant.
+
 
 ## About the data
 

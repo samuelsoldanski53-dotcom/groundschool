@@ -67,11 +67,16 @@ const Mode_Tutor = (() => {
     renderHistory(container);
 
     try {
+      let textbookContext = '';
+      if (contextQuestion && Textbook.hasTextbook(contextQuestion.subject)) {
+        const chunks = await Textbook.findRelevant(contextQuestion.subject, contextQuestion.text + ' ' + msg, 3);
+        textbookContext = Textbook.formatContext(chunks);
+      }
       const reply = await Gemini.chatTutor({
         apiKey: settings.geminiKey, model: settings.geminiModel,
         history: history.slice(0, -1).map(m => ({ role: m.role === 'ai' ? 'model' : 'user', text: m.text })),
         message: msg,
-        contextQuestion,
+        contextQuestion, textbookContext,
       });
       history[history.length - 1] = { role: 'ai', text: reply };
     } catch (e) {

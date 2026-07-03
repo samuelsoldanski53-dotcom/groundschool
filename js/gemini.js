@@ -59,20 +59,24 @@ Strict rules you must always follow:
     return `Subject: ${q.subjectName}\nQuestion #${q.number}:\n${q.text}\n\nOptions:\n${opts}\n\nMarked correct answer: ${correct}`;
   }
 
-  async function explainQuestion({ apiKey, model, question, userAnswerIndex, isCorrect }) {
+  async function explainQuestion({ apiKey, model, question, userAnswerIndex, isCorrect, textbookContext }) {
     const qBlock = formatQuestionForPrompt(question);
     const userAnswerText = userAnswerIndex != null && question.options[userAnswerIndex] != null
       ? `${String.fromCharCode(65 + userAnswerIndex)}) ${question.options[userAnswerIndex]}`
       : '(no answer selected)';
 
-    const prompt = `${qBlock}\n\nStudent's answer: ${userAnswerText}\nResult: ${isCorrect === true ? 'Correct' : isCorrect === false ? 'Incorrect' : 'Not graded (this question has no marked correct answer in the source material — treat it as reference-only and explain the concept generally without confirming or denying any option as "the" correct one)'}\n\nProvide, using short markdown-style headers:\n1. Why the correct answer is correct (or, if ungraded, what the key concept being tested is)\n2. Why the student's answer was wrong (skip if correct or no answer given)\n3. Why the other options are wrong (briefly, one line each)\n4. Key concept to remember\n5. A common mistake students make on this topic\n(Keep the whole thing tight — a few short paragraphs, not an essay.)`;
+    const contextBlock = textbookContext
+      ? `\n\nRelevant excerpts from the official course textbooks (use these to ground your explanation where they're relevant — cite the book/page naturally in prose, don't just dump them):\n${textbookContext}\n`
+      : '';
+
+    const prompt = `${qBlock}\n\nStudent's answer: ${userAnswerText}\nResult: ${isCorrect === true ? 'Correct' : isCorrect === false ? 'Incorrect' : 'Not graded (this question has no marked correct answer in the source material — treat it as reference-only and explain the concept generally without confirming or denying any option as "the" correct one)'}${contextBlock}\n\nProvide, using short markdown-style headers:\n1. Why the correct answer is correct (or, if ungraded, what the key concept being tested is)\n2. Why the student's answer was wrong (skip if correct or no answer given)\n3. Why the other options are wrong (briefly, one line each)\n4. Key concept to remember\n5. A common mistake students make on this topic\n(Keep the whole thing tight — a few short paragraphs, not an essay.)`;
 
     return callGemini(apiKey, model, TUTOR_SYSTEM, [
       { role: 'user', parts: [{ text: prompt }] },
     ]);
   }
 
-  async function chatTutor({ apiKey, model, history, message, contextQuestion }) {
+  async function chatTutor({ apiKey, model, history, message, contextQuestion, textbookContext }) {
     const contents = [];
     if (contextQuestion) {
       contents.push({
@@ -80,6 +84,13 @@ Strict rules you must always follow:
         parts: [{ text: `For context, here is the question we're discussing:\n${formatQuestionForPrompt(contextQuestion)}` }],
       });
       contents.push({ role: 'model', parts: [{ text: 'Got it — I have that question in mind. What would you like to know?' }] });
+    }
+    if (textbookContext) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: `Here are relevant excerpts from the official course textbooks — use them to ground your answer where relevant:\n${textbookContext}` }],
+      });
+      contents.push({ role: 'model', parts: [{ text: 'Noted, I\'ll draw on that where it helps.' }] });
     }
     for (const m of history) {
       contents.push({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] });
