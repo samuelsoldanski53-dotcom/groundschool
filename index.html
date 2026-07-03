@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Groundschool — ATPL/PPL Revision</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✈️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Sidebar -->
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark">✈</span>
+      <div class="brand-text">
+        <span class="brand-name">Groundschool</span>
+        <span class="brand-sub">Personal revision</span>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <button class="nav-item" data-route="dashboard">
+        <span class="nav-icon">◎</span><span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-route="learn">
+        <span class="nav-icon">◐</span><span>Learn Mode</span>
+      </button>
+      <button class="nav-item" data-route="flashcards">
+        <span class="nav-icon">▢</span><span>Flashcards</span>
+      </button>
+      <button class="nav-item" data-route="quiz">
+        <span class="nav-icon">◈</span><span>Quiz Mode</span>
+      </button>
+      <button class="nav-item" data-route="weak">
+        <span class="nav-icon">▲</span><span>Weak Topics</span>
+      </button>
+      <button class="nav-item" data-route="tutor">
+        <span class="nav-icon">✦</span><span>AI Tutor</span>
+      </button>
+    </div>
+
+    <div class="nav-group nav-group-bottom">
+      <button class="nav-item" data-route="settings">
+        <span class="nav-icon">⚙</span><span>Settings</span>
+      </button>
+      <button class="nav-item" id="theme-toggle">
+        <span class="nav-icon" id="theme-icon">☾</span><span id="theme-label">Dark mode</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="topbar">
+      <button class="hamburger" id="hamburger">☰</button>
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <div class="topbar-stats">
+        <div class="pill" id="streak-pill" title="Daily revision streak">🔥 <span id="streak-count">0</span></div>
+        <div class="pill" id="key-pill" title="Gemini API key status">● <span id="key-status">No key</span></div>
+      </div>
+    </header>
+
+    <main class="content" id="content">
+      <!-- injected per-route -->
+    </main>
+  </div>
+</div>
+
+<div id="toast-root"></div>
+
+<script src="js/data.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/srs.js"></script>
+<script src="js/gemini.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/modes/dashboard.js"></script>
+<script src="js/modes/learn.js"></script>
+<script src="js/modes/flashcards.js"></script>
+<script src="js/modes/quiz.js"></script>
+<script src="js/modes/weak.js"></script>
+<script src="js/modes/tutor.js"></script>
+<script src="js/modes/settings.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
