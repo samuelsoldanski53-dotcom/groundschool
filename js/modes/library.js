@@ -4,6 +4,7 @@ const Mode_Library = (() => {
     { code: 'NAV', name: 'Navigation' },
     { code: 'OPC', name: 'Operational Procedures' },
     { code: 'MET', name: 'Meteorology' },
+    { code: 'RT', name: 'Radiotelephony' },
   ];
   const PDFS = {
     ALW: [{ title: 'Oxford ATPL Book 1 — Air Law', file: 'ALW-oxford-book1-air-law.pdf', size: '11.3 MB' }],
@@ -13,6 +14,7 @@ const Mode_Library = (() => {
       { title: 'Oxford ATPL Book 12 — Operational Procedures', file: 'OPC-oxford-book12-operational-procedures.pdf', size: '20.4 MB' },
     ],
     MET: [{ title: 'ICAO Annex 3 — Meteorological Service for International Air Navigation', file: 'MET-icao-annex-3.pdf', size: '6.3 MB' }],
+    RT: [{ title: 'Skymax Aviation — Flight Radiotelephony Operator Notes', file: 'RT-skymax-radiotelephony-notes.pdf', size: '1.2 MB' }],
   };
   const PDF_BASE = 'data/textbook-pdfs/';
   const PAGE_SIZE = 40;

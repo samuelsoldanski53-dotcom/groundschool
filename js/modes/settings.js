@@ -49,7 +49,8 @@ const Mode_Settings = (() => {
         <h2>About this data</h2>
         <p><strong>Scored set</strong> (993 questions, 9 subjects): correct answers taken directly from the source material's own answer markings. Used for Learn, Quiz, Flashcards, and Weak Topics scoring.</p>
         <p><strong>Reference set</strong> (6,551 questions, 8 subjects): included for extra practice, but the source files don't mark a correct answer, so these are unscored — Gemini will discuss the concept but won't claim to know "the" answer.</p>
-        <p><strong>Textbook grounding</strong>: for Air Law, Navigation, Operational Procedures, and Meteorology, Gemini's explanations pull in relevant passages from the Oxford ATPL course books and ICAO Annex 3 so its answers are grounded in your actual course material.</p>
+        <p><strong>Textbook grounding</strong>: for Air Law, Navigation, Operational Procedures, Meteorology, and Radiotelephony, Gemini's explanations pull in relevant passages from the course books/notes so its answers are grounded in your actual course material.</p>
+        <p><strong>Radiotelephony (RT)</strong>: 123 real short-answer questions extracted from the Skymax RT notes' self-study appendix, graded by Gemini against the source's own model answers. In Learn Mode you can also generate AI practice MCQs grounded in the RT/ALW/NAV/OPC/MET textbooks — these are clearly tagged 🤖 and kept separate from your official mastery stats, since they're Gemini's own creation, not from any official bank.</p>
       </div>
     `;
 

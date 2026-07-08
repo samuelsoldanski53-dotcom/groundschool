@@ -3,7 +3,7 @@
 // embedding API needed, keeps everything client-side and free to run.
 const Textbook = (() => {
   const cache = {}; // subject -> chunks[] | null (null = confirmed no textbook)
-  const AVAILABLE_SUBJECTS = new Set(['ALW', 'NAV', 'OPC', 'MET']);
+  const AVAILABLE_SUBJECTS = new Set(['ALW', 'NAV', 'OPC', 'MET', 'RT']);
 
   const STOPWORDS = new Set('a an the of to in and for is are on with as by at from this that be or which it its into can may shall must not used use should will if than then when where each their these those such has have been'.split(' '));
 

@@ -4,7 +4,7 @@ const Mode_Flashcards = (() => {
   let filters = { subject: '', dueOnly: false };
 
   function buildDeck() {
-    let list = DataStore.all().filter(q => q.scored && q.correctIndex != null);
+    let list = DataStore.all().filter(q => q.scored && (q.type === 'short' ? !!q.answer : q.correctIndex != null));
     if (filters.subject) list = list.filter(q => q.subject === filters.subject);
     if (filters.dueOnly) list = list.filter(q => SRS.isDue(Store.getCardSrs(q.id)));
     return list;
@@ -66,7 +66,7 @@ const Mode_Flashcards = (() => {
             <div class="flashcard-face back">
               <div>
                 <div class="eyebrow" style="margin-bottom:10px; color:var(--amber);">Answer</div>
-                ${UI.escapeHtml(q.options[q.correctIndex])}
+                ${UI.escapeHtml(q.type === 'short' ? q.answer : q.options[q.correctIndex])}
               </div>
             </div>
           </div>

@@ -54,6 +54,9 @@ Strict rules you must always follow:
   }
 
   function formatQuestionForPrompt(q) {
+    if (q.type === 'short') {
+      return `Subject: ${q.subjectName}\nQuestion #${q.number} (short-answer):\n${q.text}\n\nModel answer from the source material: ${q.answer}`;
+    }
     const opts = q.options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join('\n');
     const correct = q.scored && q.correctIndex != null ? String.fromCharCode(65 + q.correctIndex) : 'unknown (not marked in source material)';
     return `Subject: ${q.subjectName}\nQuestion #${q.number}:\n${q.text}\n\nOptions:\n${opts}\n\nMarked correct answer: ${correct}`;
@@ -99,14 +102,39 @@ Strict rules you must always follow:
     return callGemini(apiKey, model, TUTOR_SYSTEM, contents);
   }
 
-  async function gradeFreeAnswer({ apiKey, model, question, studentAnswer }) {
+  async function gradeFreeAnswer({ apiKey, model, question, studentAnswer, textbookContext }) {
     const qBlock = formatQuestionForPrompt(question);
-    const prompt = `${qBlock}\n\nThis is a free-text answer question. The student answered:\n"${studentAnswer}"\n\nCompare it against the marked correct answer above. Respond with a first line of exactly "GRADE: CORRECT" or "GRADE: INCORRECT" or "GRADE: PARTIAL", then on following lines briefly explain why, referencing the correct answer.`;
+    const contextBlock = textbookContext ? `\n\nRelevant excerpts from the official course textbook:\n${textbookContext}\n` : '';
+    const prompt = `${qBlock}${contextBlock}\n\nThis is a free-text answer question. The student answered:\n"${studentAnswer}"\n\nCompare it against the model answer above — the student doesn't need to match it word-for-word, just cover the same substance. Respond with a first line of exactly "GRADE: CORRECT" or "GRADE: INCORRECT" or "GRADE: PARTIAL", then on following lines briefly explain why, referencing the model answer and filling in anything the student missed.`;
     const text = await callGemini(apiKey, model, TUTOR_SYSTEM, [{ role: 'user', parts: [{ text: prompt }] }]);
     const gradeMatch = text.match(/GRADE:\s*(CORRECT|INCORRECT|PARTIAL)/i);
     const grade = gradeMatch ? gradeMatch[1].toUpperCase() : 'UNKNOWN';
     return { grade, explanation: text.replace(/GRADE:\s*(CORRECT|INCORRECT|PARTIAL)\s*/i, '').trim() };
   }
 
-  return { testConnection, explainQuestion, chatTutor, gradeFreeAnswer };
+  async function generatePracticeQuestion({ apiKey, model, subjectName, textbookContext }) {
+    const prompt = `Write ONE original multiple-choice practice question for a student studying "${subjectName}" for an aviation ground-school exam (ATPL/PPL style, similar in format to real question banks: a clear stem, 4 options labeled A-D, exactly one correct).
+
+This question must be clearly your own creation for practice purposes — it is NOT from any official question bank, and must not be presented as if it were.
+
+${textbookContext ? `Base it on this excerpt from the course textbook so it's grounded in real content:\n${textbookContext}\n` : `Base it on well-established aviation knowledge for this subject.`}
+
+Respond with ONLY valid JSON, no markdown fences, no commentary, in exactly this shape:
+{"question": "...", "options": ["...", "...", "...", "..."], "correctIndex": 0, "explanation": "1-2 sentence explanation of why the correct answer is right"}`;
+
+    const text = await callGemini(apiKey, model, null, [{ role: 'user', parts: [{ text: prompt }] }]);
+    const cleaned = text.replace(/^```json\s*|^```\s*|```\s*$/gm, '').trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      throw new Error('Gemini returned an unexpected format — try again.');
+    }
+    if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2 || typeof parsed.correctIndex !== 'number') {
+      throw new Error('Gemini returned an incomplete question — try again.');
+    }
+    return parsed;
+  }
+
+  return { testConnection, explainQuestion, chatTutor, gradeFreeAnswer, generatePracticeQuestion };
 })();

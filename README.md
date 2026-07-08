@@ -73,6 +73,42 @@ Subjects without a matching textbook (AGK, COM, FPP, HPL, POF) work exactly as
 before — Gemini answers from its own aviation knowledge, clearly labelled as
 supplementary where relevant.
 
+## Radiotelephony (RT)
+
+You later uploaded a Skymax Aviation RT notes document. Two genuinely different
+things came out of it:
+
+1. **123 real questions** — the notes end with a "Self Study Questions" appendix:
+   123 short-answer Q&A pairs with real model answers already written into the
+   source (e.g. "What is the minimum age for a R/T licence? [17 Years]"). These
+   are loaded as **scored, short-answer** questions (`type: "short"`) — a new
+   question type alongside the existing multiple-choice ones. In Learn Mode you
+   type an answer instead of picking an option, and Gemini grades it against the
+   source's own model answer (correct / partial / incorrect), the same way it
+   would grade any free-text response. These also work as flashcards. They're
+   excluded from Quiz Mode, which is click-based and MCQ-only by design.
+2. **The rest of the document** (radio theory, ATC procedures, distress/urgency
+   phraseology, Q-codes, call signs, etc.) was chunked into `data/textbooks/RT.json`
+   (50 sections) exactly like the other textbooks, and the original PDF is
+   bundled in `data/textbook-pdfs/` — browsable in the Library.
+
+**On AI-generated questions:** you asked for AI to craft questions where none
+were provided. Since real questions *were* available here (the 123 above), I
+used those rather than inventing anything — fabricated questions could teach
+wrong "facts" with no way to verify them against a real source, which runs
+against the whole point of this app (fidelity to your actual material). Instead,
+I added a **separate, clearly-labelled feature**: in Learn Mode, pick a subject
+that has a textbook (ALW, NAV, OPC, MET, or RT) and you'll see a "🤖 Generate
+one" button. It asks Gemini to write a fresh multiple-choice practice question
+grounded in that subject's textbook content — tagged **"AI-generated — not from
+an official bank"**, answered instantly, and deliberately **not** counted toward
+your mastery/weak-topics stats, so it can never be confused with or dilute your
+real exam-readiness numbers. I checked the actual format regulators use for RT
+exams (KCAA, SACAA, UK CAA) before building this — multiple-choice with 3-4
+options is the standard format, sometimes mixed with True/False or fill-in-the-
+blank, which is what these generated questions follow.
+
+
 
 
 ## About the data

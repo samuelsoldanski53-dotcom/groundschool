@@ -7,7 +7,9 @@ const Mode_Quiz = (() => {
   }
 
   function setupScreen() {
-    const subjects = DataStore.getSubjects().filter(s => s.scoredCount > 0);
+    const subjects = DataStore.getSubjects().filter(s =>
+      DataStore.bySubjectCode(s.code).some(q => q.scored && q.type === 'mcq')
+    );
     const history = Store.getQuizHistory().slice(0, 5);
     return `
       <div class="eyebrow">Ultra Revision</div>
@@ -77,7 +79,7 @@ const Mode_Quiz = (() => {
   }
 
   function startQuiz(container, { subject, count, weak, fresh, fixedPool }) {
-    let pool = fixedPool || DataStore.all().filter(q => q.scored);
+    let pool = fixedPool || DataStore.all().filter(q => q.scored && q.type === 'mcq');
     if (!fixedPool) {
       if (subject) pool = pool.filter(q => q.subject === subject);
       if (fresh) pool = pool.filter(q => !masteryOk(q.id));
