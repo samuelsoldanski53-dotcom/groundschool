@@ -148,6 +148,7 @@ const Mode_Learn = (() => {
         <div class="explain-block">
           <h3>🧠 Gemini tutor</h3>
           <div class="body explain-loading" id="explain-body">Loading explanation…</div>
+          ${Textbook.hasTextbook(q.subject) ? `<button class="btn btn-ghost btn-sm" id="open-library-btn" style="margin-top:10px;">📘 Browse ${UI.escapeHtml(q.subjectName)} textbook</button>` : ''}
         </div>
         <div class="qa-controls" style="margin-top:16px;">
           <button class="btn btn-primary btn-sm" id="next-q-btn">Next question <kbd>→</kbd></button>
@@ -157,6 +158,8 @@ const Mode_Learn = (() => {
     `;
     feedback.querySelector('#next-q-btn').addEventListener('click', () => nextQuestion(stage.closest('#content')));
     feedback.querySelector('#ask-more-btn').addEventListener('click', () => App.navigate('tutor', { questionId: q.id }));
+    const libBtn = feedback.querySelector('#open-library-btn');
+    if (libBtn) libBtn.addEventListener('click', () => App.navigate('library', { subject: q.subject }));
 
     loadExplanation(q, i, isCorrect);
   }

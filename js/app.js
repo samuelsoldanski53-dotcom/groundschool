@@ -5,6 +5,7 @@ const App = (() => {
     flashcards: { title: 'Flashcards', mod: () => Mode_Flashcards },
     quiz: { title: 'Quiz Mode', mod: () => Mode_Quiz },
     weak: { title: 'Weak Topics', mod: () => Mode_Weak },
+    library: { title: 'Library', mod: () => Mode_Library },
     tutor: { title: 'AI Tutor', mod: () => Mode_Tutor },
     settings: { title: 'Settings', mod: () => Mode_Settings },
   };

@@ -31,26 +31,40 @@ flashcard), and everything is mobile-responsive.
 ## Textbook grounding
 
 Your upload also included a `TextBooks/` folder. I extracted and chunked the ones
-with a real text layer:
+with a real text layer, **and** the original PDFs themselves are now bundled in
+the app under `data/textbook-pdfs/` — viewable in-app or downloadable straight
+from the **Library** section:
 
-| Book | Subject | Chunks |
-|---|---|---|
-| Oxford ATPL Book 1 — Air Law | ALW | 404 |
-| Oxford ATPL Book 10 — General Navigation | NAV | 463 |
-| ATPL Book 12 + Oxford ATPL Book 12 — Operational Procedures | OPC | 368 |
-| ICAO Annex 3 — Meteorological Service for International Air Navigation | MET | 166 |
+| Book | Subject | Chunks | Original PDF |
+|---|---|---|---|
+| Oxford ATPL Book 1 — Air Law | ALW | 404 | 11.3 MB (compressed from 110 MB, see note below) |
+| Oxford ATPL Book 10 — General Navigation | NAV | 463 | 35.2 MB |
+| ATPL Book 12 + Oxford ATPL Book 12 — Operational Procedures | OPC | 368 | 3.1 MB + 20.4 MB |
+| ICAO Annex 3 — Meteorological Service for International Air Navigation | MET | 166 | 6.3 MB |
 
-These live in `data/textbooks/*.json` (~4MB total, loaded lazily per subject only
-when you're studying that subject). When you view a question in Air Law, Navigation,
-Operational Procedures, or Meteorology, the app does a lightweight keyword search
-over the relevant book's chunks and feeds the 2-3 most relevant passages to Gemini
-so its explanation is grounded in the actual course material rather than general
-knowledge — same in Learn Mode, Quiz review, and the AI Tutor when a question is in
-context.
+**About GitHub's file size limit:** GitHub blocks any individual file over 100MB
+— that's a hard per-file cap, not something you can get around by splitting it
+across multiple commits/pushes. The original Air Law PDF was 110MB, so I ran it
+through Ghostscript's `/ebook` compression preset (downsamples embedded images to
+~150dpi, recompresses fonts) to bring it down to 11.3MB — still fully readable on
+screen, just not print-resolution. Every other textbook PDF was already under the
+limit and is included at full original quality. Total repo size with all of this
+included is about 84MB, comfortably fine for a normal GitHub repo.
 
-Two files from that folder weren't included:
+Where you'll find them:
+- **Library** (new sidebar section): browse/search the extracted text per subject,
+  plus **View** (opens the real PDF in-app) and **Download** buttons for each
+  original book.
+- **Learn Mode**: a "📘 Browse [subject] textbook" button appears under Gemini's
+  explanation for any question in a subject that has a textbook.
+- **Behind the scenes**: the chunked text (not the PDFs — those are just for you
+  to read) is what gets fed to Gemini as grounding context in Learn Mode, Quiz
+  review, and the AI Tutor.
+
+Two files from the original folder weren't included:
 - **`AIRLAW SUMMARY.pdf`** is a scanned/image-only PDF with no text layer, so it
-  couldn't be extracted without OCR. The full Air Law book covers the same ground.
+  couldn't be extracted or meaningfully compressed further without OCR. The full
+  Air Law book covers the same ground.
 - **`OPC_EN.pdf`** turned out to be a smaller excerpt of the same Operational
   Procedures question bank you already have in `Black/`, not a textbook — skipped
   as redundant.
@@ -58,6 +72,7 @@ Two files from that folder weren't included:
 Subjects without a matching textbook (AGK, COM, FPP, HPL, POF) work exactly as
 before — Gemini answers from its own aviation knowledge, clearly labelled as
 supplementary where relevant.
+
 
 
 ## About the data
