@@ -15,7 +15,7 @@ const Textbook = (() => {
     if (subject in cache) return cache[subject];
     if (!AVAILABLE_SUBJECTS.has(subject)) { cache[subject] = null; return null; }
     try {
-      const res = await fetch(`data/textbooks/${subject}.json`);
+      const res = await fetch(`data/textbooks/${subject}.json?v=${typeof APP_DATA_VERSION !== 'undefined' ? APP_DATA_VERSION : 1}`);
       if (!res.ok) { cache[subject] = null; return null; }
       cache[subject] = await res.json();
     } catch (e) {

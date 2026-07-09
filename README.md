@@ -115,16 +115,24 @@ blank, which is what these generated questions follow.
 
 Your upload contained two question banks:
 
-- **`Black/` (993 questions → 979 usable, 9 subjects)**: the source PDFs mark the
-  correct answer directly (a checked-box glyph), so these are fully **scored** —
-  used for Learn/Quiz correctness checking, Flashcards, and Weak Topics.
-- **`Blue/` (6,551 questions, 8 subjects)**: a different export format (Kenya
-  civil-aviation focused). I checked every page for a correct-answer marking —
-  bold, colour, an answer-key appendix — and there isn't one in these files. These
-  are loaded as **unscored reference practice** only: Learn Mode will show them and
-  Gemini will discuss the concept, but nothing claims to know "the" right answer.
-  If you have a separate answer key for this set, send it over and I can wire up
-  scoring for it too.
+- **Black set (979 scored questions, 9 subjects)**: the source PDFs mark the
+  correct answer with a checkbox glyph, so these are fully **scored**.
+- **Blue set (6,551 questions, 8 subjects)**: I initially got this one wrong —
+  I checked text formatting, color, and boldness for an answer marking and
+  found nothing, so I shipped it as "unscored reference only." You correctly
+  pointed out the PDFs actually do mark answers: each option has a small square
+  checkbox drawn next to it, and the correct one has an **X drawn inside it as
+  two crossing vector lines** — not a text character or font/color difference,
+  which is why my first pass missed it entirely. Once I looked for the actual
+  checkbox shapes instead of text styling, **6,520 of 6,551** parsed cleanly with
+  exactly one marked answer per question and are now fully **scored**, same as
+  the Black set. The remaining **31 (all in Meteorology)** had ambiguous
+  detection — likely a page-layout quirk in that section — and are left
+  unscored rather than risk a guessed answer.
+
+Combined with the Radiotelephony additions below, that's **7,522 scored
+questions across 10 subjects** now driving Learn, Quiz, Flashcards, and Weak
+Topics.
 
 Both source files carry a copyright notice from the publisher (LPLUS GmbH /
 Aircademy). This app is set up for **your personal study use only** — if you ever
@@ -214,5 +222,6 @@ simple:
 }
 ```
 
-If you get an answer key for the Blue set, or more question banks later, you can
-regenerate/extend this file and everything else keeps working.
+If you spot more questions where the detection seems off (wrong or missing
+marked answer), flag the subject and question number and I can take another
+look at that section of the source PDF.
