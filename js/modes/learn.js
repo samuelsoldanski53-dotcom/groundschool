@@ -43,7 +43,7 @@ const Mode_Learn = (() => {
         </select>
         <select id="lf-source">
           <option value="black" ${currentFilters.source==='black'?'selected':''}>Scored (answer key available)</option>
-          <option value="blue" ${currentFilters.source==='blue'?'selected':''}>Unscored only (no reliable answer)</option>
+          <option value="blue" ${currentFilters.source==='blue'?'selected':''}>Reference only (no answer key)</option>
           <option value="all" ${currentFilters.source==='all'?'selected':''}>All questions</option>
         </select>
         <input type="search" id="lf-search" placeholder="Search keyword…" value="${UI.escapeHtml(currentFilters.search)}">

@@ -10,7 +10,8 @@ const Mode_Flashcards = (() => {
     return list;
   }
 
-  function render(container) {
+  function render(container, params = {}) {
+    if (params.subject) filters.subject = params.subject;
     const subjects = DataStore.getSubjects().filter(s => s.scoredCount > 0);
     container.innerHTML = `
       <div class="eyebrow">Ultra Revision</div>
@@ -20,7 +21,7 @@ const Mode_Flashcards = (() => {
       <div class="filters">
         <select id="fc-subject">
           <option value="">All subjects</option>
-          ${subjects.map(s => `<option value="${s.code}">${UI.escapeHtml(s.name)}</option>`).join('')}
+          ${subjects.map(s => `<option value="${s.code}" ${filters.subject===s.code?'selected':''}>${UI.escapeHtml(s.name)}</option>`).join('')}
         </select>
         <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-dim); font-weight:500;">
           <input type="checkbox" id="fc-due" style="width:auto;"> Due for review only

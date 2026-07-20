@@ -1,8 +1,4 @@
 // Loads and indexes the question bank.
-// APP_DATA_VERSION is bumped on every release so browsers/CDNs never serve
-// a stale cached copy of the (large) data files after an update.
-const APP_DATA_VERSION = 7;
-
 const DataStore = (() => {
   let questions = [];
   let bySubject = {};
@@ -11,7 +7,7 @@ const DataStore = (() => {
 
   async function load() {
     if (loaded) return questions;
-    const res = await fetch(`data/questions.json?v=${APP_DATA_VERSION}`);
+    const res = await fetch('data/questions.json');
     questions = await res.json();
     bySubject = {};
     for (const q of questions) {

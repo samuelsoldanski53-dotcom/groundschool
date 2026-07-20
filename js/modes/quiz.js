@@ -1,12 +1,12 @@
 const Mode_Quiz = (() => {
   let quiz = null; // { questions, answers: [], current, startedAt, flagged: Set }
 
-  function render(container) {
-    container.innerHTML = setupScreen();
+  function render(container, params = {}) {
+    container.innerHTML = setupScreen(params.subject || '');
     bindSetup(container);
   }
 
-  function setupScreen() {
+  function setupScreen(preselectSubject) {
     const subjects = DataStore.getSubjects().filter(s =>
       DataStore.bySubjectCode(s.code).some(q => q.scored && q.type === 'mcq')
     );
@@ -23,7 +23,7 @@ const Mode_Quiz = (() => {
             <label>Subject</label>
             <select id="qz-subject">
               <option value="">Mixed — all subjects</option>
-              ${subjects.map(s => `<option value="${s.code}">${UI.escapeHtml(s.name)} (${s.scoredCount})</option>`).join('')}
+              ${subjects.map(s => `<option value="${s.code}" ${preselectSubject===s.code?'selected':''}>${UI.escapeHtml(s.name)} (${s.scoredCount})</option>`).join('')}
             </select>
           </div>
           <div class="field">
@@ -120,17 +120,11 @@ const Mode_Quiz = (() => {
         </div>
         <div class="q-text">${UI.escapeHtml(q.text)}</div>
         <div class="options" id="qz-options">
-          ${q.options.map((o, i) => {
-            let cls = 'option';
-            if (answered) {
-              if (i === q.correctIndex) cls += ' correct';
-              else if (i === quiz.answers[quiz.current]) cls += ' incorrect';
-            }
-            return `
-            <button class="${cls}" data-idx="${i}" ${answered?'disabled':''}>
+          ${q.options.map((o, i) => `
+            <button class="option" data-idx="${i}" ${answered?'disabled':''}
+              ${answered && i===q.correctIndex ? 'style="border-color:var(--success);"' : ''}>
               <span class="option-letter">${UI.letter(i)}</span><span>${UI.escapeHtml(o)}</span>
-            </button>`;
-          }).join('')}
+            </button>`).join('')}
         </div>
         <div class="qa-controls">
           <button class="btn btn-ghost btn-sm" id="qz-prev" ${quiz.current===0?'disabled':''}>← Previous</button>
