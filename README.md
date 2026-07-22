@@ -41,40 +41,6 @@ or alters them.
 - Fixed a data bug where the Blue set's Human Performance subject code (`HP`)
   didn't match the Black set's (`HPL`), which caused a duplicate entry in the
   subject dropdown/cards. Both now use `HPL` consistently.
-- **Library & Topic rebuild (this session):** the whole Library and Learn Mode
-  were restructured into Subject → Topic → Learn/Flashcards/Topic Quiz, matching
-  a real learning-platform hierarchy instead of one long mixed question pool.
-  - **Human Performance textbook added.** You uploaded the Oxford ATPL Book 8 —
-    Human Performance and Limitations PDF; it's now chunked into `data/textbooks/HPL.json`
-    (17 real chapters, page-linked) exactly like the other five textbooks.
-  - **Topic detection**: for the 6 textbook subjects (ALW, NAV, OPC, MET-original,
-    RT, HPL) I parsed each book's real table of contents and located the actual
-    chapter-divider pages in the PDF, so every topic is backed by real page ranges
-    — nothing invented. This is best-effort text parsing, not a human-verified index:
-    ALW (26 topics), OPC (19), MET-icao (unused, see below), RT (11), HPL (17) came
-    out clean; NAV (36 topics) has one known gap — "Topographical Maps and Map
-    Reading" didn't get its own boundary and its content is folded into the
-    previous chapter's range.
-  - **Meteorology textbook swapped for a syllabus list.** The only MET PDF on hand
-    (ICAO Annex 3) is a regulatory standard about *how* meteorological services
-    are delivered, not weather science — your actual MET questions are about
-    clouds, fronts, and pressure systems, so matching them against Annex 3 gave
-    poor results. MET now uses a standard EASA 050 syllabus topic list (12 topics)
-    instead, same approach as the no-textbook subjects below.
-  - **No-textbook subjects** (AGK, COM, FPP, POF) each got a standard EASA
-    syllabus-based topic list (5–17 topics depending on subject) with no lesson
-    text behind them — just a Learn/Flashcards/Quiz split by topic.
-  - **All 7,653 questions were categorized** by TF-IDF text-similarity against
-    each subject's topic content (real lesson text where available, syllabus
-    keywords otherwise) — every question has a topic, none left in a generic
-    pool. This is automated content-matching, not manually verified; spot-checks
-    looked sound, but treat topic boundaries as "best effort," especially for the
-    5 syllabus-based subjects where match confidence is inherently lower (no real
-    lesson text to compare against).
-  - Dashboard now shows **topics completed/remaining** and **strongest/weakest
-    topics**, computed the same way as the existing subject-level stats.
-  - Weak Topics mode is unchanged (still subject-level, not topic-level) — a
-    good next step if you want topic-level weak-area tracking too.
 
 
 Dark/light mode, keyboard shortcuts (1–7 to answer, → for next, Space to flip a
@@ -121,10 +87,9 @@ Two files from the original folder weren't included:
   Procedures question bank you already have in `Black/`, not a textbook — skipped
   as redundant.
 
-Subjects without a matching textbook (AGK, COM, FPP, POF) work exactly as
+Subjects without a matching textbook (AGK, COM, FPP, HPL, POF) work exactly as
 before — Gemini answers from its own aviation knowledge, clearly labelled as
-supplementary where relevant. **HPL now has a real textbook** — see the Library
-& Topics changelog entry below.
+supplementary where relevant.
 
 ## Radiotelephony (RT)
 

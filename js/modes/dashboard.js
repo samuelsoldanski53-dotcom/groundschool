@@ -14,22 +14,6 @@ const Mode_Dashboard = (() => {
     const quizHistory = Store.getQuizHistory();
     const bestQuizScore = quizHistory.length ? Math.max(...quizHistory.map(h => h.pct)) : null;
 
-    let totalTopics = 0, completedTopics = 0;
-    const allTopicStats = [];
-    subjects.forEach(s => {
-      DataStore.getTopics(s.code).forEach(t => {
-        totalTopics++;
-        const qs = DataStore.byTopic(t.id).filter(q => q.scored);
-        if (!qs.length) return;
-        const attempted = qs.filter(q => (progress[q.id] || {}).attempts > 0).length;
-        const correctCount = qs.filter(q => (progress[q.id] || {}).lastResult).length;
-        if (attempted === qs.length) completedTopics++;
-        if (attempted) allTopicStats.push({ title: t.title, subject: t.subject, pct: (correctCount / attempted) * 100 });
-      });
-    });
-    const strongest = allTopicStats.slice().sort((a, b) => b.pct - a.pct).slice(0, 3);
-    const weakest = allTopicStats.slice().sort((a, b) => a.pct - b.pct).slice(0, 3);
-
     container.innerHTML = `
       <div class="eyebrow">Overview</div>
       <div class="hero-row">
@@ -68,26 +52,7 @@ const Mode_Dashboard = (() => {
             <div class="subject-meta">Questions to revisit</div>
           </div>
         </div>
-        <div class="card" style="display:flex; align-items:center; gap:16px;">
-          <div style="font-family:var(--font-display); font-size:34px; font-weight:700;">${completedTopics}<span style="font-size:16px; color:var(--text-faint);">/${totalTopics}</span></div>
-          <div>
-            <div class="subject-name">Topics completed</div>
-            <div class="subject-meta"><a href="#" id="dash-go-library" style="color:inherit;">Browse Library →</a></div>
-          </div>
-        </div>
       </div>
-
-      ${allTopicStats.length ? `
-      <div class="grid grid-2" style="margin-top:20px;">
-        <div class="card">
-          <div class="subject-name">💪 Strongest topics</div>
-          ${strongest.map(t => `<div class="subject-meta" style="padding:4px 0;">${UI.escapeHtml(t.title)} <span style="color:var(--text-faint);">(${t.subject})</span> — ${Math.round(t.pct)}%</div>`).join('')}
-        </div>
-        <div class="card">
-          <div class="subject-name">⚠ Weakest topics</div>
-          ${weakest.map(t => `<div class="subject-meta" style="padding:4px 0;">${UI.escapeHtml(t.title)} <span style="color:var(--text-faint);">(${t.subject})</span> — ${Math.round(t.pct)}%</div>`).join('')}
-        </div>
-      </div>` : ''}
 
       <div style="display:flex; align-items:center; justify-content:space-between; margin-top:28px;">
         <h2 style="margin:0;">Subjects</h2>
@@ -117,8 +82,6 @@ const Mode_Dashboard = (() => {
     container.querySelectorAll('[data-go-quiz]').forEach(btn => {
       btn.addEventListener('click', () => App.navigate('quiz', { subject: btn.dataset.goQuiz }));
     });
-    const goLib = container.querySelector('#dash-go-library');
-    if (goLib) goLib.addEventListener('click', (e) => { e.preventDefault(); App.navigate('library'); });
   }
 
   function chapterCard(s) {
