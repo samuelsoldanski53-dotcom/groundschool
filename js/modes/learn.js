@@ -2,11 +2,12 @@ const Mode_Learn = (() => {
   let queue = [];
   let idx = 0;
   let answered = false;
-  let currentFilters = { subject: '', source: 'black', search: '' };
+  let currentFilters = { subject: '', topic: '', source: 'black', search: '' };
 
   function buildQueue() {
     let list = DataStore.all();
-    if (currentFilters.subject) list = list.filter(q => q.subject === currentFilters.subject);
+    if (currentFilters.topic) list = list.filter(q => q.topic === currentFilters.topic);
+    else if (currentFilters.subject) list = list.filter(q => q.subject === currentFilters.subject);
     if (currentFilters.source === 'black') list = list.filter(q => q.scored);
     if (currentFilters.source === 'blue') list = list.filter(q => !q.scored);
     if (currentFilters.search) {
@@ -19,17 +20,57 @@ const Mode_Learn = (() => {
 
   function render(container, params = {}) {
     if (params.subject) currentFilters.subject = params.subject;
+    currentFilters.topic = params.topic || '';
     queue = buildQueue();
     idx = 0;
     answered = false;
-    container.innerHTML = shell();
-    bindFilterEvents(container);
-    const genBtn = container.querySelector('#gen-practice-btn');
-    if (genBtn) genBtn.addEventListener('click', () => generatePractice(container));
+    container.innerHTML = shell(params);
+    if (currentFilters.topic) {
+      renderLessonPanel(container, currentFilters.topic);
+      const backBtn = container.querySelector('#learn-back-topic');
+      if (backBtn) backBtn.addEventListener('click', () => App.navigate('library', { view: 'topic', topic: currentFilters.topic }));
+    } else {
+      bindFilterEvents(container);
+      const genBtn = container.querySelector('#gen-practice-btn');
+      if (genBtn) genBtn.addEventListener('click', () => generatePractice(container));
+    }
     renderQuestion(container);
   }
 
-  function shell() {
+  async function renderLessonPanel(container, topicId) {
+    const slot = container.querySelector('#lesson-panel');
+    if (!slot) return;
+    const topic = DataStore.getTopic(topicId);
+    if (!topic) { slot.innerHTML = ''; return; }
+    const chunks = await Textbook.getTopicChunks(topic.subject, topicId);
+    if (!chunks.length) {
+      slot.innerHTML = `<div class="card" style="border-style:dashed;"><p class="subject-meta" style="margin:0;">No lesson text on file for this topic yet — this is a syllabus-based topic without a linked textbook.</p></div>`;
+      return;
+    }
+    slot.innerHTML = `
+      <div class="card lesson-card">
+        <div class="eyebrow">Lesson · ${UI.escapeHtml(chunks[0].book)}</div>
+        <details ${chunks.length <= 2 ? 'open' : ''}>
+          <summary style="cursor:pointer; font-weight:600; margin-bottom:8px;">Read the lesson (pages ${chunks[0].pageStart}–${chunks[chunks.length-1].pageEnd})</summary>
+          <div class="lesson-text" style="max-height:420px; overflow-y:auto; font-size:13.5px; line-height:1.6; white-space:pre-wrap; margin-top:10px;">${chunks.map(c => UI.escapeHtml(c.text)).join('\n\n')}</div>
+        </details>
+      </div>
+    `;
+  }
+
+  function shell(params = {}) {
+    if (currentFilters.topic) {
+      const topic = DataStore.getTopic(currentFilters.topic);
+      return `
+        <div class="eyebrow">${topic ? UI.escapeHtml(topic.subject) : ''} · Learn</div>
+        <h1>${topic ? UI.escapeHtml(topic.title) : 'Learn'}</h1>
+        <div class="qa-controls" style="justify-content:flex-start; margin-bottom:14px;">
+          <button class="btn btn-ghost btn-sm" id="learn-back-topic">← Back to topic</button>
+        </div>
+        <div id="lesson-panel" style="margin-bottom:18px;"></div>
+        <div id="learn-stage"></div>
+      `;
+    }
     const subjects = DataStore.getSubjects();
     return `
       <div class="eyebrow">Ultra Revision</div>

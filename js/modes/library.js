@@ -1,185 +1,262 @@
 const Mode_Library = (() => {
-  const SUBJECTS = [
-    { code: 'ALW', name: 'Air Law' },
-    { code: 'NAV', name: 'Navigation' },
-    { code: 'OPC', name: 'Operational Procedures' },
-    { code: 'MET', name: 'Meteorology' },
-    { code: 'RT', name: 'Radiotelephony' },
-  ];
-  const PDFS = {
-    ALW: [{ title: 'Oxford ATPL Book 1 — Air Law', file: 'ALW-oxford-book1-air-law.pdf', size: '11.3 MB' }],
-    NAV: [{ title: 'Oxford ATPL Book 10 — General Navigation', file: 'NAV-oxford-book10-general-navigation.pdf', size: '35.2 MB' }],
-    OPC: [
-      { title: 'ATPL Book 12 — Operational Procedures', file: 'OPC-book12-operational-procedures.pdf', size: '3.1 MB' },
-      { title: 'Oxford ATPL Book 12 — Operational Procedures', file: 'OPC-oxford-book12-operational-procedures.pdf', size: '20.4 MB' },
-    ],
-    MET: [{ title: 'ICAO Annex 3 — Meteorological Service for International Air Navigation', file: 'MET-icao-annex-3.pdf', size: '6.3 MB' }],
-    RT: [{ title: 'Skymax Aviation — Flight Radiotelephony Operator Notes', file: 'RT-skymax-radiotelephony-notes.pdf', size: '1.2 MB' }],
-  };
-  const PDF_BASE = 'data/textbook-pdfs/';
-  const PAGE_SIZE = 40;
-  let state = { subject: null, chunks: [], filtered: [], shown: 0, query: '' };
+  let searchTerm = '';
 
   function render(container, params = {}) {
-    if (params.subject) {
-      openSubject(container, params.subject);
-    } else {
-      renderIndex(container);
-    }
+    const view = params.view || (params.topic ? 'topic' : params.subject ? 'subject' : 'subjects');
+    if (view === 'topic' && params.topic) return renderTopic(container, params.topic);
+    if (view === 'subject' && params.subject) return renderSubject(container, params.subject);
+    return renderSubjects(container);
   }
 
-  function renderIndex(container) {
-    container.innerHTML = `
-      <div class="eyebrow">Reference</div>
-      <h1>Library</h1>
-      <p>The course textbooks behind Gemini's explanations, extracted and made readable in-app. This is the same content the AI Tutor draws on when it explains a question in these subjects.</p>
-
-      <div class="grid grid-2" style="margin-top:8px;" id="lib-cards">
-        ${SUBJECTS.map(s => `
-          <div class="card subject-card" data-open="${s.code}" style="cursor:pointer;">
-            <div class="subject-info">
-              <div class="subject-code">${s.code}</div>
-              <div class="subject-name">${UI.escapeHtml(s.name)}</div>
-              <div class="subject-meta" id="lib-meta-${s.code}">Loading…</div>
-            </div>
-            <button class="btn btn-sm">Open →</button>
-          </div>
-        `).join('')}
-      </div>
-
-      <div class="card" style="margin-top:16px;">
-        <p style="margin:0;">Subjects without a textbook here (AGK, COM, FPP, HPL, POF) aren't missing anything broken — those source PDFs just weren't book-format material, so Gemini answers those from general aviation knowledge instead.</p>
-      </div>
-    `;
-
-    container.querySelectorAll('[data-open]').forEach(card => {
-      card.addEventListener('click', () => openSubject(container, card.dataset.open));
-    });
-
-    // fill in chunk counts / book titles async
-    SUBJECTS.forEach(async s => {
-      const chunks = await Textbook.loadSubject(s.code);
-      const meta = document.getElementById(`lib-meta-${s.code}`);
-      if (!meta) return;
-      if (!chunks || !chunks.length) { meta.textContent = 'Unavailable'; return; }
-      const books = [...new Set(chunks.map(c => c.book))];
-      meta.textContent = `${books.length > 1 ? books.length + ' books' : books[0]} · ${chunks.length} sections`;
-    });
+  function topicProgress(topicId) {
+    const qs = DataStore.byTopic(topicId).filter(q => q.scored);
+    if (!qs.length) return { total: 0, attempted: 0, correct: 0, pct: 0, avgScore: null };
+    const progress = Store.getProgress();
+    let attempted = 0, correct = 0;
+    for (const q of qs) {
+      const p = progress[q.id];
+      if (p && p.attempts > 0) {
+        attempted++;
+        if (p.lastResult) correct++;
+      }
+    }
+    return {
+      total: qs.length, attempted, correct,
+      pct: qs.length ? Math.round((attempted / qs.length) * 100) : 0,
+      avgScore: attempted ? Math.round((correct / attempted) * 100) : null,
+    };
   }
 
-  async function openSubject(container, subjectCode) {
-    container.innerHTML = `<div class="empty-state">Loading ${UI.escapeHtml(subjectCode)} library…</div>`;
-    const chunks = await Textbook.loadSubject(subjectCode);
-    const subjMeta = SUBJECTS.find(s => s.code === subjectCode);
+  function subjectStats(code) {
+    const topics = DataStore.getTopics(code);
+    const questions = DataStore.bySubjectCode(code).filter(q => q.scored);
+    let completedTopics = 0, totalAttempted = 0;
+    topics.forEach(t => {
+      const tp = topicProgress(t.id);
+      totalAttempted += tp.attempted;
+      if (tp.total && tp.attempted === tp.total) completedTopics++;
+    });
+    const estMinutes = topics.length * 12 + questions.length * 0.6;
+    return {
+      topicCount: topics.length,
+      questionCount: questions.length,
+      completionPct: questions.length ? Math.round((totalAttempted / questions.length) * 100) : 0,
+      completedTopics,
+      estMinutes: Math.round(estMinutes),
+    };
+  }
 
-    if (!chunks || !chunks.length) {
-      container.innerHTML = `<div class="empty-state"><div class="icon">📘</div>No textbook available for this subject.</div>
-        <button class="btn" id="lib-back">← Back to Library</button>`;
-      container.querySelector('#lib-back').addEventListener('click', () => renderIndex(container));
-      return;
-    }
+  function fmtMinutes(mins) {
+    if (mins < 60) return `${mins}m`;
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return `${h}h${m ? ` ${m}m` : ''}`;
+  }
 
-    state = { subject: subjectCode, chunks, filtered: chunks, shown: PAGE_SIZE, query: '' };
-    const books = [...new Set(chunks.map(c => c.book))];
-    const pdfs = PDFS[subjectCode] || [];
+  function renderSubjects(container) {
+    const subjects = DataStore.getSubjects();
+    const recent = recentTopics();
 
     container.innerHTML = `
-      <button class="btn btn-ghost btn-sm" id="lib-back">← Back to Library</button>
-      <div class="eyebrow" style="margin-top:10px;">${books.join(' · ')}</div>
-      <h1>${UI.escapeHtml(subjMeta.name)}</h1>
-
-      ${pdfs.length ? `
-      <div class="card" style="margin-bottom:16px;">
-        <h2>Original textbook${pdfs.length > 1 ? 's' : ''}</h2>
-        <p>The searchable sections below are extracted from these — open the original if you want the real page layout, diagrams, and figures.</p>
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          ${pdfs.map(p => `
-            <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius);">
-              <span style="flex:1; font-size:13.5px;">📄 ${UI.escapeHtml(p.title)} <span class="hint" style="display:inline;">(${p.size})</span></span>
-              <button class="btn btn-sm" data-view-pdf="${p.file}">View</button>
-              <a class="btn btn-sm" href="${PDF_BASE}${p.file}" download>⬇ Download</a>
-            </div>
-          `).join('')}
-        </div>
-        <div id="lib-pdf-viewer" style="display:none; margin-top:14px;"></div>
-      </div>
-      ` : ''}
+      <div class="eyebrow">Library</div>
+      <h1>Browse by subject</h1>
+      <p>Every textbook, broken into topics — each with its own lesson, flashcards, and quiz.</p>
 
       <div class="filters">
-        <input type="search" id="lib-search" placeholder="Search this book…" style="max-width:340px;">
-        <span class="hint" id="lib-count" style="align-self:center;"></span>
+        <input type="search" id="lib-search" placeholder="Search all questions and lessons…" value="${UI.escapeHtml(searchTerm)}">
       </div>
-      <div id="lib-content"></div>
-      <div style="text-align:center; margin-top:18px;">
-        <button class="btn" id="lib-more">Load more</button>
+
+      <div id="lib-search-results"></div>
+
+      ${recent.length ? `
+      <h2 style="margin-top:22px;">Continue learning</h2>
+      <div class="grid grid-2" style="margin-top:10px;">
+        ${recent.map(t => topicMiniCard(t)).join('')}
+      </div>` : ''}
+
+      <h2 style="margin-top:26px;">Subjects</h2>
+      <div class="grid grid-2" style="margin-top:10px;" id="lib-subject-grid">
+        ${subjects.map(s => subjectCard(s)).join('')}
       </div>
     `;
 
-    container.querySelectorAll('[data-view-pdf]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const viewer = container.querySelector('#lib-pdf-viewer');
-        const src = `${PDF_BASE}${btn.dataset.viewPdf}`;
-        viewer.style.display = 'block';
-        viewer.innerHTML = `<iframe src="${src}" style="width:100%; height:70vh; border:1px solid var(--border); border-radius:var(--radius);"></iframe>`;
-        viewer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
+    container.querySelector('#lib-subject-grid').querySelectorAll('[data-go-subject]').forEach(el => {
+      el.addEventListener('click', () => App.navigate('library', { view: 'subject', subject: el.dataset.goSubject }));
+    });
+    container.querySelectorAll('[data-go-topic]').forEach(el => {
+      el.addEventListener('click', () => App.navigate('library', { view: 'topic', topic: el.dataset.goTopic }));
     });
 
-    container.querySelector('#lib-back').addEventListener('click', () => renderIndex(container));
-    container.querySelector('#lib-more').addEventListener('click', () => {
-      state.shown += PAGE_SIZE;
-      renderContent(container);
-    });
-
+    const searchInput = container.querySelector('#lib-search');
     let t;
-    container.querySelector('#lib-search').addEventListener('input', e => {
+    searchInput.addEventListener('input', e => {
       clearTimeout(t);
-      const q = e.target.value;
-      t = setTimeout(() => {
-        state.query = q.trim().toLowerCase();
-        state.filtered = state.query
-          ? state.chunks.filter(c => c.text.toLowerCase().includes(state.query))
-          : state.chunks;
-        state.shown = PAGE_SIZE;
-        renderContent(container);
-      }, 250);
+      t = setTimeout(() => { searchTerm = e.target.value; renderSearch(container); }, 250);
     });
-
-    renderContent(container);
+    if (searchTerm) renderSearch(container);
   }
 
-  function highlight(text, query) {
-    const safe = UI.escapeHtml(text);
-    if (!query) return safe;
-    const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return safe.replace(new RegExp(`(${esc})`, 'ig'), '<mark style="background:var(--amber); color:#1B1204; border-radius:2px;">$1</mark>');
-  }
-
-  function renderContent(container) {
-    const content = container.querySelector('#lib-content');
-    const countEl = container.querySelector('#lib-count');
-    const moreBtn = container.querySelector('#lib-more');
-    const list = state.filtered;
-    const visible = list.slice(0, state.shown);
-
-    countEl.textContent = state.query
-      ? `${list.length} matching section${list.length === 1 ? '' : 's'}`
-      : `${list.length} sections total`;
-
-    if (!visible.length) {
-      content.innerHTML = `<div class="empty-state"><div class="icon">🔍</div>No sections match "${UI.escapeHtml(state.query)}".</div>`;
-      moreBtn.style.display = 'none';
-      return;
+  function recentTopics() {
+    const recentIds = Store.getRecent();
+    const seen = new Set();
+    const topics = [];
+    for (const qid of recentIds) {
+      const q = DataStore.byId(qid);
+      if (!q || !q.topic || seen.has(q.topic)) continue;
+      seen.add(q.topic);
+      const topic = DataStore.getTopic(q.topic);
+      if (topic) topics.push(topic);
+      if (topics.length >= 4) break;
     }
+    return topics;
+  }
 
-    content.innerHTML = visible.map(c => `
-      <div class="card" style="margin-top:12px;">
-        <div class="eyebrow">${UI.escapeHtml(c.book)} · p.${c.pageStart}${c.pageEnd !== c.pageStart ? '-' + c.pageEnd : ''}</div>
-        <p style="color:var(--text); margin-top:8px; white-space:pre-wrap;">${highlight(c.text, state.query)}</p>
+  function topicMiniCard(topic) {
+    const tp = topicProgress(topic.id);
+    return `
+      <div class="card subject-card" data-go-topic="${topic.id}" style="cursor:pointer;">
+        <div class="subject-info">
+          <div class="subject-name">${UI.escapeHtml(topic.title)}</div>
+          <div class="subject-meta">${UI.escapeHtml(topic.subject)} · ${tp.attempted}/${tp.total} questions attempted</div>
+        </div>
+        ${UI.progressBar(tp.pct)}
+      </div>`;
+  }
+
+  function subjectCard(s) {
+    const meta = SubjectsMeta.get(s.code);
+    const stats = subjectStats(s.code);
+    const hasBook = DataStore.isTextbookSubject(s.code);
+    return `
+      <div class="card subject-card" data-go-subject="${s.code}" style="cursor:pointer;">
+        <div style="display:flex; align-items:flex-start; gap:14px;">
+          <div style="font-size:26px;">${meta.icon}</div>
+          <div style="flex:1;">
+            <div class="subject-name">${UI.escapeHtml(s.name)} <span class="subject-meta">(${s.code})</span></div>
+            <div class="subject-meta" style="margin-top:4px;">
+              ${stats.topicCount} topic${stats.topicCount === 1 ? '' : 's'} · ${stats.questionCount} questions · ~${fmtMinutes(stats.estMinutes)}
+              ${hasBook ? ' · 📘 textbook' : ' · question bank only'}
+            </div>
+          </div>
+          <div style="font-family:var(--font-mono); font-weight:700; font-size:15px;">${stats.completionPct}%</div>
+        </div>
+        ${UI.progressBar(stats.completionPct)}
+      </div>`;
+  }
+
+  function renderSearch(container) {
+    const slot = container.querySelector('#lib-search-results');
+    if (!searchTerm.trim()) { slot.innerHTML = ''; return; }
+    const results = DataStore.search(searchTerm, {}).slice(0, 25);
+    slot.innerHTML = `
+      <div class="card" style="margin-top:14px;">
+        <div class="eyebrow">${results.length} match${results.length === 1 ? '' : 'es'}</div>
+        ${results.length ? results.map(q => {
+          const topic = q.topic ? DataStore.getTopic(q.topic) : null;
+          return `<div class="qz-review-item" data-go-topic="${q.topic || ''}" style="padding:10px 0; border-bottom:1px solid var(--border); cursor:${topic ? 'pointer' : 'default'};">
+            <div style="font-size:13.5px;">${UI.escapeHtml(q.text)}</div>
+            <div class="subject-meta">${UI.escapeHtml(q.subjectName)}${topic ? ` · ${UI.escapeHtml(topic.title)}` : ''}</div>
+          </div>`;
+        }).join('') : '<p class="subject-meta">No matches.</p>'}
       </div>
-    `).join('');
+    `;
+    slot.querySelectorAll('[data-go-topic]').forEach(el => {
+      if (!el.dataset.goTopic) return;
+      el.addEventListener('click', () => App.navigate('library', { view: 'topic', topic: el.dataset.goTopic }));
+    });
+  }
 
-    moreBtn.style.display = state.shown < list.length ? 'inline-flex' : 'none';
+  function renderSubject(container, code) {
+    const subj = DataStore.getSubjects().find(s => s.code === code);
+    const topics = DataStore.getTopics(code);
+    const meta = SubjectsMeta.get(code);
+    const stats = subjectStats(code);
+
+    container.innerHTML = `
+      <div class="eyebrow"><a href="#" id="lib-crumb-subjects" style="color:inherit;">Library</a> / ${UI.escapeHtml(code)}</div>
+      <h1>${meta.icon} ${UI.escapeHtml(subj ? subj.name : code)}</h1>
+      <p class="subject-meta">${stats.topicCount} topics · ${stats.questionCount} questions · ${stats.completedTopics}/${stats.topicCount} topics complete</p>
+      ${UI.progressBar(stats.completionPct)}
+
+      ${!topics.length ? `<div class="empty-state" style="margin-top:20px;"><div class="icon">▢</div>No topic breakdown yet for this subject.</div>` : `
+      <div class="grid grid-2" style="margin-top:20px;">
+        ${topics.map(t => topicCard(t)).join('')}
+      </div>`}
+    `;
+
+    container.querySelector('#lib-crumb-subjects').addEventListener('click', (e) => { e.preventDefault(); App.navigate('library'); });
+    container.querySelectorAll('[data-go-topic]').forEach(el => {
+      el.addEventListener('click', () => App.navigate('library', { view: 'topic', topic: el.dataset.goTopic }));
+    });
+  }
+
+  function topicCard(t) {
+    const tp = topicProgress(t.id);
+    const done = tp.total && tp.attempted === tp.total;
+    return `
+      <div class="card subject-card" data-go-topic="${t.id}" style="cursor:pointer;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+          <div class="subject-name">${done ? '✅ ' : ''}${UI.escapeHtml(t.title)}</div>
+          ${tp.avgScore != null ? `<span style="font-family:var(--font-mono); font-size:12.5px; color:var(--text-dim);">${tp.avgScore}%</span>` : ''}
+        </div>
+        <div class="subject-meta">${tp.total} questions${t.syllabusBased ? ' · syllabus topic' : ''}</div>
+        ${UI.progressBar(tp.pct)}
+      </div>`;
+  }
+
+  function renderTopic(container, topicId) {
+    const topic = DataStore.getTopic(topicId);
+    if (!topic) { container.innerHTML = `<div class="empty-state">Topic not found.</div>`; return; }
+    const tp = topicProgress(topicId);
+    const questions = DataStore.byTopic(topicId);
+
+    container.innerHTML = `
+      <div class="eyebrow">
+        <a href="#" id="lib-crumb-subjects" style="color:inherit;">Library</a> /
+        <a href="#" id="lib-crumb-subject" style="color:inherit;">${UI.escapeHtml(topic.subject)}</a> /
+        ${UI.escapeHtml(topic.title)}
+      </div>
+      <h1>${UI.escapeHtml(topic.title)}</h1>
+      <p class="subject-meta">${tp.total} questions · ${tp.attempted}/${tp.total} attempted${tp.avgScore != null ? ` · ${tp.avgScore}% correct so far` : ''}</p>
+      ${UI.progressBar(tp.pct)}
+
+      <div class="grid grid-3" style="margin-top:20px; grid-template-columns:repeat(3,1fr);">
+        <div class="card" style="text-align:center; cursor:pointer;" id="topic-go-learn">
+          <div style="font-size:24px;">📖</div>
+          <div class="subject-name" style="margin-top:6px;">Learn</div>
+          <div class="subject-meta">Lesson + guided questions</div>
+        </div>
+        <div class="card" style="text-align:center; cursor:pointer;" id="topic-go-flashcards">
+          <div style="font-size:24px;">🗂️</div>
+          <div class="subject-name" style="margin-top:6px;">Flashcards</div>
+          <div class="subject-meta">Spaced repetition</div>
+        </div>
+        <div class="card" style="text-align:center; cursor:pointer;" id="topic-go-quiz">
+          <div style="font-size:24px;">📝</div>
+          <div class="subject-name" style="margin-top:6px;">Topic Quiz</div>
+          <div class="subject-meta">Scored, ${tp.total} questions</div>
+        </div>
+      </div>
+
+      ${tp.attempted && tp.avgScore != null && tp.avgScore < 70 ? `
+      <div class="card" style="margin-top:18px; border-color:var(--error);">
+        <div class="subject-name" style="color:var(--error);">⚠ Weak area</div>
+        <p class="subject-meta" style="margin:4px 0 0;">Your accuracy here is ${tp.avgScore}%. Worth another pass — the Topic Quiz will let you retry what you miss.</p>
+      </div>` : ''}
+
+      <h2 style="margin-top:26px;">Questions in this topic</h2>
+      <div class="card" style="margin-top:10px;">
+        ${questions.slice(0, 30).map(q => `
+          <div style="padding:9px 0; border-bottom:1px solid var(--border); font-size:13.5px;">${UI.escapeHtml(q.text)}</div>
+        `).join('')}
+        ${questions.length > 30 ? `<div class="subject-meta" style="padding-top:8px;">+ ${questions.length - 30} more — open Learn or Quiz to see the rest.</div>` : ''}
+      </div>
+    `;
+
+    container.querySelector('#lib-crumb-subjects').addEventListener('click', (e) => { e.preventDefault(); App.navigate('library'); });
+    container.querySelector('#lib-crumb-subject').addEventListener('click', (e) => { e.preventDefault(); App.navigate('library', { view: 'subject', subject: topic.subject }); });
+    container.querySelector('#topic-go-learn').addEventListener('click', () => App.navigate('learn', { topic: topicId }));
+    container.querySelector('#topic-go-flashcards').addEventListener('click', () => App.navigate('flashcards', { topic: topicId }));
+    container.querySelector('#topic-go-quiz').addEventListener('click', () => App.navigate('quiz', { topic: topicId }));
   }
 
   return { render };

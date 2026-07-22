@@ -3,7 +3,7 @@
 // embedding API needed, keeps everything client-side and free to run.
 const Textbook = (() => {
   const cache = {}; // subject -> chunks[] | null (null = confirmed no textbook)
-  const AVAILABLE_SUBJECTS = new Set(['ALW', 'NAV', 'OPC', 'MET', 'RT']);
+  const AVAILABLE_SUBJECTS = new Set(['ALW', 'NAV', 'OPC', 'MET', 'RT', 'HPL']);
 
   const STOPWORDS = new Set('a an the of to in and for is are on with as by at from this that be or which it its into can may shall must not used use should will if than then when where each their these those such has have been'.split(' '));
 
@@ -51,9 +51,15 @@ const Textbook = (() => {
     ).join('\n\n---\n\n');
   }
 
+  async function getTopicChunks(subject, topicId) {
+    const chunks = await loadSubject(subject);
+    if (!chunks) return [];
+    return chunks.filter(c => c.topic === topicId).sort((a, b) => a.pageStart - b.pageStart);
+  }
+
   function hasTextbook(subject) {
     return AVAILABLE_SUBJECTS.has(subject);
   }
 
-  return { loadSubject, findRelevant, formatContext, hasTextbook };
+  return { loadSubject, findRelevant, formatContext, hasTextbook, getTopicChunks };
 })();

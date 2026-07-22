@@ -1,12 +1,30 @@
 const Mode_Quiz = (() => {
   let quiz = null; // { questions, answers: [], current, startedAt, flagged: Set }
 
-  function render(container) {
-    container.innerHTML = setupScreen();
+  function render(container, params = {}) {
+    if (params.topic) {
+      const topic = DataStore.getTopic(params.topic);
+      const pool = DataStore.byTopic(params.topic).filter(q => q.scored && q.type === 'mcq');
+      container.innerHTML = `
+        <div class="eyebrow">${topic ? UI.escapeHtml(topic.subject) : ''} · Topic Quiz</div>
+        <h1>${topic ? UI.escapeHtml(topic.title) : 'Topic Quiz'}</h1>
+        <p>${pool.length} question${pool.length === 1 ? '' : 's'} for this topic only.</p>
+        <div class="qa-controls" style="justify-content:flex-start; gap:12px;">
+          <button class="btn btn-ghost btn-sm" id="qz-back-topic">← Back to topic</button>
+          <button class="btn btn-primary" id="qz-start-topic" ${pool.length ? '' : 'disabled'}>Start topic quiz</button>
+        </div>
+        <div id="qz-stage"></div>
+      `;
+      container.querySelector('#qz-back-topic').addEventListener('click', () => App.navigate('library', { view: 'topic', topic: params.topic }));
+      const startBtn = container.querySelector('#qz-start-topic');
+      if (startBtn) startBtn.addEventListener('click', () => startQuiz(container, { fixedPool: pool, returnTopic: params.topic }));
+      return;
+    }
+    container.innerHTML = setupScreen(params.subject || '');
     bindSetup(container);
   }
 
-  function setupScreen() {
+  function setupScreen(preselectSubject) {
     const subjects = DataStore.getSubjects().filter(s =>
       DataStore.bySubjectCode(s.code).some(q => q.scored && q.type === 'mcq')
     );
@@ -23,7 +41,7 @@ const Mode_Quiz = (() => {
             <label>Subject</label>
             <select id="qz-subject">
               <option value="">Mixed — all subjects</option>
-              ${subjects.map(s => `<option value="${s.code}">${UI.escapeHtml(s.name)} (${s.scoredCount})</option>`).join('')}
+              ${subjects.map(s => `<option value="${s.code}" ${preselectSubject===s.code?'selected':''}>${UI.escapeHtml(s.name)} (${s.scoredCount})</option>`).join('')}
             </select>
           </div>
           <div class="field">
@@ -78,7 +96,7 @@ const Mode_Quiz = (() => {
     return p.attempts >= 3 && p.lastResult === true;
   }
 
-  function startQuiz(container, { subject, count, weak, fresh, fixedPool }) {
+  function startQuiz(container, { subject, count, weak, fresh, fixedPool, returnTopic }) {
     let pool = fixedPool || DataStore.all().filter(q => q.scored && q.type === 'mcq');
     if (!fixedPool) {
       if (subject) pool = pool.filter(q => q.subject === subject);
@@ -101,7 +119,7 @@ const Mode_Quiz = (() => {
       UI.toast('No questions match those filters.', 'error');
       return;
     }
-    quiz = { questions: selected, answers: new Array(selected.length).fill(null), current: 0, startedAt: Date.now(), flagged: new Set() };
+    quiz = { questions: selected, answers: new Array(selected.length).fill(null), current: 0, startedAt: Date.now(), flagged: new Set(), returnTopic: returnTopic || null };
     renderQuestion(container);
   }
 
@@ -165,14 +183,15 @@ const Mode_Quiz = (() => {
       if (quiz.answers[i] === q.correctIndex) bySubject[q.subject].correct++;
     });
 
-    Store.pushQuizResult({ total, correct, pct, subjects: Object.keys(bySubject) });
+    Store.pushQuizResult({ total, correct, pct, subjects: Object.keys(bySubject), topic: quiz.returnTopic || undefined });
 
     const incorrectQuestions = quiz.questions.filter((q, i) => quiz.answers[i] !== q.correctIndex);
     const flaggedQuestions = quiz.questions.filter(q => quiz.flagged.has(q.id));
+    const topic = quiz.returnTopic ? DataStore.getTopic(quiz.returnTopic) : null;
 
     container.innerHTML = `
-      <div class="eyebrow">Quiz complete</div>
-      <h1>Results</h1>
+      <div class="eyebrow">${topic ? UI.escapeHtml(topic.subject) + ' · Topic Quiz' : 'Quiz complete'}</div>
+      <h1>Results${topic ? `: ${UI.escapeHtml(topic.title)}` : ''}</h1>
       <div class="card" style="display:flex; align-items:center; gap:24px; padding:28px;">
         ${UI.gaugeSvg(pct, 'score')}
         <div>
@@ -180,6 +199,12 @@ const Mode_Quiz = (() => {
           <div class="subject-meta">${pct >= 75 ? 'Solid result — keep this pace up.' : pct >= 50 ? 'Getting there — worth another pass on the misses below.' : 'Rough one — that\'s exactly what Weak Topics and Retry are for.'}</div>
         </div>
       </div>
+
+      ${incorrectQuestions.length ? `
+      <h2 style="margin-top:24px;">Weak areas from this attempt</h2>
+      <div class="card" style="padding:16px 18px;">
+        <p class="subject-meta" style="margin:0;">You missed ${incorrectQuestions.length} of ${total} questions here. Retry them below, or head to the full <a href="#" id="qz-go-weak">Weak Topics</a> view to see patterns across every subject.</p>
+      </div>` : ''}
 
       <h2 style="margin-top:24px;">By subject</h2>
       <div class="grid grid-2" style="margin-top:12px;">
@@ -194,6 +219,7 @@ const Mode_Quiz = (() => {
       </div>
 
       <div class="qa-controls" style="margin-top:22px; flex-wrap:wrap;">
+        ${topic ? `<button class="btn" id="qz-back-topic-results">← Back to topic</button>` : ''}
         <button class="btn btn-primary" id="qz-restart">New quiz</button>
         ${incorrectQuestions.length ? `<button class="btn" id="qz-retry-wrong">Retry the ${incorrectQuestions.length} I missed</button>` : ''}
         ${flaggedQuestions.length ? `<button class="btn" id="qz-retry-flagged">Review ${flaggedQuestions.length} flagged</button>` : ''}
@@ -220,9 +246,13 @@ const Mode_Quiz = (() => {
 
     container.querySelector('#qz-restart').addEventListener('click', () => render(container));
     const retryWrongBtn = container.querySelector('#qz-retry-wrong');
-    if (retryWrongBtn) retryWrongBtn.addEventListener('click', () => startQuiz(container, { fixedPool: incorrectQuestions }));
+    if (retryWrongBtn) retryWrongBtn.addEventListener('click', () => startQuiz(container, { fixedPool: incorrectQuestions, returnTopic: quiz.returnTopic }));
     const retryFlaggedBtn = container.querySelector('#qz-retry-flagged');
-    if (retryFlaggedBtn) retryFlaggedBtn.addEventListener('click', () => startQuiz(container, { fixedPool: flaggedQuestions }));
+    if (retryFlaggedBtn) retryFlaggedBtn.addEventListener('click', () => startQuiz(container, { fixedPool: flaggedQuestions, returnTopic: quiz.returnTopic }));
+    const backTopicBtn = container.querySelector('#qz-back-topic-results');
+    if (backTopicBtn) backTopicBtn.addEventListener('click', () => App.navigate('library', { view: 'topic', topic: quiz.returnTopic }));
+    const goWeakLink = container.querySelector('#qz-go-weak');
+    if (goWeakLink) goWeakLink.addEventListener('click', (e) => { e.preventDefault(); App.navigate('weak'); });
 
     container.querySelectorAll('[data-explain]').forEach(btn => {
       btn.addEventListener('click', () => explainReviewQuestion(btn.dataset.explain));

@@ -53,6 +53,23 @@ const UI = (() => {
     return (correct / seen) * 100;
   }
 
+  // % of a subject's scored questions the user has attempted at least once
+  function subjectCoverage(code) {
+    const qs = DataStore.bySubjectCode(code).filter(q => q.scored);
+    if (!qs.length) return 0;
+    const progress = Store.getProgress();
+    const seen = qs.filter(q => progress[q.id] && progress[q.id].attempts > 0).length;
+    return (seen / qs.length) * 100;
+  }
+
+  // best % score across quiz history entries touching this subject
+  function subjectBestQuizScore(code) {
+    const hist = Store.getQuizHistory();
+    const relevant = hist.filter(h => Array.isArray(h.subjects) && h.subjects.includes(code));
+    if (!relevant.length) return null;
+    return Math.max(...relevant.map(h => h.pct));
+  }
+
   function requireApiKey() {
     const s = Store.getSettings();
     if (!s.geminiKey) {
@@ -74,5 +91,5 @@ const UI = (() => {
     return `${d}d ago`;
   }
 
-  return { escapeHtml, toast, letter, gaugeSvg, progressBar, subjectMastery, requireApiKey, timeAgo };
+  return { escapeHtml, toast, letter, gaugeSvg, progressBar, subjectMastery, subjectCoverage, subjectBestQuizScore, requireApiKey, timeAgo };
 })();

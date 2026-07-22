@@ -24,6 +24,7 @@ const App = (() => {
     routes[name].mod().render(content, params);
     document.getElementById('sidebar').classList.remove('open');
     window.scrollTo(0, 0);
+    if (DataStore.all().length) renderSidebarSubjects();
   }
 
   function applyTheme(theme) {
@@ -42,6 +43,38 @@ const App = (() => {
 
   function updateStreakPill() {
     document.getElementById('streak-count').textContent = Store.getStreak().count;
+  }
+
+  function renderSidebarSubjects() {
+    const list = document.getElementById('sidebar-subjects');
+    const coverage = document.getElementById('sidebar-coverage');
+    if (!list || !coverage) return;
+    const subjects = DataStore.getSubjects();
+
+    list.innerHTML = subjects.map(s => {
+      const meta = SubjectsMeta.get(s.code);
+      const pct = Math.round(UI.subjectCoverage(s.code));
+      return `
+        <div class="sidebar-subject-item" data-go-subject="${s.code}">
+          <div class="sidebar-subject-row">
+            <span class="name">${meta.icon} ${UI.escapeHtml(s.code)}</span>
+            <span class="pct">${pct}%</span>
+          </div>
+          <div class="sidebar-mini-bar"><div style="width:${pct}%; background:var(--${meta.accent});"></div></div>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-go-subject]').forEach(el => {
+      el.addEventListener('click', () => navigate('learn', { subject: el.dataset.goSubject }));
+    });
+
+    const totalScored = DataStore.all().filter(q => q.scored).length;
+    const attempted = Object.values(Store.getProgress()).filter(p => p.attempts > 0).length;
+    const overallCoverage = totalScored ? Math.round((attempted / totalScored) * 100) : 0;
+    coverage.innerHTML = `
+      <div class="sidebar-coverage-top"><span>Coverage</span><span>${overallCoverage}%</span></div>
+      <div class="sidebar-coverage-sub">Across all scored subjects</div>
+    `;
   }
 
   async function init() {
@@ -65,10 +98,11 @@ const App = (() => {
 
     document.getElementById('content').innerHTML = `<div class="empty-state">Loading question bank…</div>`;
     await DataStore.load();
+    renderSidebarSubjects();
     navigate('dashboard');
   }
 
-  return { navigate, currentRoute, applyTheme, updateKeyPill, updateStreakPill, init };
+  return { navigate, currentRoute, applyTheme, updateKeyPill, updateStreakPill, renderSidebarSubjects, init };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);

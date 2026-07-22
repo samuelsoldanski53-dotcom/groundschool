@@ -1,16 +1,36 @@
 const Mode_Flashcards = (() => {
   let deck = [];
   let pos = 0;
-  let filters = { subject: '', dueOnly: false };
+  let filters = { subject: '', topic: '', dueOnly: false };
 
   function buildDeck() {
     let list = DataStore.all().filter(q => q.scored && (q.type === 'short' ? !!q.answer : q.correctIndex != null));
-    if (filters.subject) list = list.filter(q => q.subject === filters.subject);
+    if (filters.topic) list = list.filter(q => q.topic === filters.topic);
+    else if (filters.subject) list = list.filter(q => q.subject === filters.subject);
     if (filters.dueOnly) list = list.filter(q => SRS.isDue(Store.getCardSrs(q.id)));
     return list;
   }
 
-  function render(container) {
+  function render(container, params = {}) {
+    if (params.subject) filters.subject = params.subject;
+    filters.topic = params.topic || '';
+    if (filters.topic) {
+      const topic = DataStore.getTopic(filters.topic);
+      container.innerHTML = `
+        <div class="eyebrow">${topic ? UI.escapeHtml(topic.subject) : ''} · Flashcards</div>
+        <h1>${topic ? UI.escapeHtml(topic.title) : 'Flashcards'}</h1>
+        <p>Auto-generated from this topic's question bank — nothing invented, just the original question and its marked correct answer.</p>
+        <div class="filters">
+          <button class="btn btn-ghost btn-sm" id="fc-back-topic">← Back to topic</button>
+          <button class="btn btn-sm" id="fc-shuffle">🔀 Shuffle</button>
+        </div>
+        <div id="fc-stage"></div>
+      `;
+      container.querySelector('#fc-back-topic').addEventListener('click', () => App.navigate('library', { view: 'topic', topic: filters.topic }));
+      container.querySelector('#fc-shuffle').addEventListener('click', () => { deck = DataStore.shuffle(deck); pos = 0; renderCard(container); UI.toast('Shuffled'); });
+      resetDeck(container);
+      return;
+    }
     const subjects = DataStore.getSubjects().filter(s => s.scoredCount > 0);
     container.innerHTML = `
       <div class="eyebrow">Ultra Revision</div>
@@ -20,7 +40,7 @@ const Mode_Flashcards = (() => {
       <div class="filters">
         <select id="fc-subject">
           <option value="">All subjects</option>
-          ${subjects.map(s => `<option value="${s.code}">${UI.escapeHtml(s.name)}</option>`).join('')}
+          ${subjects.map(s => `<option value="${s.code}" ${filters.subject===s.code?'selected':''}>${UI.escapeHtml(s.name)}</option>`).join('')}
         </select>
         <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-dim); font-weight:500;">
           <input type="checkbox" id="fc-due" style="width:auto;"> Due for review only
